@@ -1,83 +1,84 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http; // For making HTTP requests
-import 'dart:convert';
-
-
-
-Future<Position> getLocation() async {
-  bool serviceEnabled;
-  LocationPermission permission;
-
-  // Test if location services are enabled.
-  serviceEnabled = await Geolocator.isLocationServiceEnabled();
-  if (!serviceEnabled) {
-    // Location services are not enabled don't continue
-    // accessing the position and request users of the
-    // App to enable the location services.
-    return Future.error('Location services are disabled.');
-  }
-
-  permission = await Geolocator.checkPermission();
-  if (permission == LocationPermission.denied) {
-    permission = await Geolocator.requestPermission();
-    if (permission == LocationPermission.denied) {
-      // Permissions are denied, next time you could try
-      // requesting permissions again (this is also where
-      // Android's shouldShowRequestPermissionRationale
-      // returned true. According to Android guidelines
-      // your App should show an explanatory UI now.
-      return Future.error('Location permissions are denied');
-    }
-  }
-
-  if (permission == LocationPermission.deniedForever) {
-    // Permissions are denied forever, handle appropriately.
-    return Future.error(
-        'Location permissions are permanently denied, we cannot request permissions.');
-  }
-
-  // When we reach here, permissions are granted and we can
-  // continue accessing the position of the device.
-  return await Geolocator.getCurrentPosition();
-}
-
-
-
+import 'package:hive/hive.dart';
+import 'package:hivepractice/hive/location.dart';
+import 'package:hivepractice/markthisspotdialog.dart';
+import 'package:hivepractice/functions/fetchaddress.dart';
+import 'package:hivepractice/functions/fetchwhat3words.dart';
+import 'package:hivepractice/functions/getlocation.dart';
 
 
 class MarkThisSpotDialog {
   static void show(BuildContext context) {
     String name = '';
     String notes = '';
+    DateTime? selectedDateTime; // Variable to store selected date and time
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Mark this spot'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min, // Ensures the dialog doesn't stretch unnecessarily
-            children: [
-              TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Name',
-                  border: OutlineInputBorder(), // Adds a box around the text field
-                ),
-                onChanged: (value) {
-                  name = value;
-                },
-              ),
-              const SizedBox(height: 16), // Adds spacing between text fields
-              TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Notes',
-                  border: OutlineInputBorder(), // Adds a box around the text field
-                ),
-                onChanged: (value) {
-                  notes = value;
-                },
-              ),
-            ],
+          content: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min, // Ensures the dialog doesn't stretch unnecessarily
+                children: [
+                  TextFormField(
+                    decoration: const InputDecoration(
+                      labelText: 'Name',
+                      border: OutlineInputBorder(), // Adds a box around the text field
+                    ),
+                    onChanged: (value) {
+                      name = value;
+                    },
+                  ),
+                  const SizedBox(height: 16), // Adds spacing between text fields
+                  TextFormField(
+                    decoration: const InputDecoration(
+                      labelText: 'Notes',
+                      border: OutlineInputBorder(), // Adds a box around the text field
+                    ),
+                    onChanged: (value) {
+                      notes = value;
+                    },
+                  ),
+                  const SizedBox(height: 16), // Adds spacing between elements
+
+                  // Add Date/Time Button
+                  ElevatedButton(
+                    onPressed: () async {
+                      DateTime? pickedDate = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now(),
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2101),
+                      );
+                      if (pickedDate != null) {
+                        TimeOfDay? pickedTime = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.now(),
+                        );
+                        if (pickedTime != null) {
+                          setState(() {
+                            selectedDateTime = DateTime(
+                              pickedDate.year,
+                              pickedDate.month,
+                              pickedDate.day,
+                              pickedTime.hour,
+                              pickedTime.minute,
+                            );
+                          });
+                        }
+                      }
+                    },
+                    child: Text(selectedDateTime == null
+                        ? 'Add Date / Time'
+                        : 'Selected: ${selectedDateTime!.toString()}'),
+                  ),
+                ],
+              );
+            },
           ),
           actions: [
             TextButton(
@@ -88,7 +89,7 @@ class MarkThisSpotDialog {
             ),
             TextButton(
               onPressed: () {
-                getThisSpot(name, notes);
+                getThisSpot(name, notes, selectedDateTime);
                 Navigator.of(context).pop();
               },
               child: const Text('OK'),
@@ -100,18 +101,21 @@ class MarkThisSpotDialog {
   }
 }
 
-void getThisSpot(String name, String notes) async {
+void getThisSpot(String name, String notes, DateTime? selectedDateTime) async {
   try {
     Position position = await getLocation();
     var longitude = position.longitude.toDouble();
     var latitude = position.latitude.toDouble();
     var altitude = position.altitude.toDouble();
-    var timestamp = DateTime.now().toIso8601String();
-
-
+    DateTime timestamp = DateTime.now();
+    DateTime appointment = selectedDateTime ?? DateTime.now();
 
     // Fetch the address using the reverse geocoding service
     String? address = await ReverseGeocodingService.fetchAddress(latitude, longitude);
+    String? words = await what3wordsService.fetchWhat3Words(latitude, longitude);
+    address ??= 'Address could not be found.';
+    words ??= 'No what3words available.';
+
 
     // If the address was successfully fetched
     address ??= 'Address could not be found.';
@@ -122,6 +126,38 @@ void getThisSpot(String name, String notes) async {
     print("Notes: $notes");
     print("Timestamp: $timestamp");
     print("Address: $address");
+    print("Words: $words");
+    print("Timestamp: $timestamp");
+    print("Appointment: $appointment");
+
+
+
+
+    // Open the Hive box
+    var box = await Hive.openBox<Location>('locationBox');
+
+    // Generate a new ID based on the current length of the box
+    int newId = box.length + 1;
+
+    // Create a new Location object
+    Location newLocation = Location(
+      id: newId,
+      name: name,
+      latitude: latitude,
+      longitude: longitude,
+      altitude: altitude,
+      address: address,
+      what3words: words,
+      timeStamp: timestamp,
+      appointment: appointment,
+      notes: notes,
+    );
+    // Add the new location to the Hive box
+    await box.add(newLocation);
+
+    print("Location saved successfully!");
+
+
 
 // insert into Hive here
 
@@ -132,28 +168,6 @@ void getThisSpot(String name, String notes) async {
   }
 }
 
-class ReverseGeocodingService {
-  static Future<String?> fetchAddress(double latitude, double longitude) async {
-    // Replace latitude and longitude in the API URL
-    final String apiUrl = 'https://geocode.maps.co/reverse?lat=$latitude&lon=$longitude&api_key=66e83cf47d11b039582715lqb6edf33';
 
-    try {
-      // Make the HTTP GET request
-      final response = await http.get(Uri.parse(apiUrl));
 
-      // Check if the response was successful
-      if (response.statusCode == 200) {
-        // Decode the JSON response
-        final Map<String, dynamic> data = json.decode(response.body);
-        // Extract information from the JSON
-        String? address = data['display_name'];
-        return address;  // Return the address as a String
-      } else {
-        return null; // Return null if the response failed
-      }
-    } catch (error) {
-      print('Error fetching the address: $error');
-      return null; // Return null if there's an error
-    }
-  }
-}
+
