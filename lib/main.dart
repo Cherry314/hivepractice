@@ -9,7 +9,7 @@ import 'home.dart'; // Import your mod
 void main()  async{
   await Hive.initFlutter();
   Hive.registerAdapter(LocationAdapter()); // Register the adapter
-  var box = await Hive.openBox<Location>('locationBox');  // Open a box
+  await Hive.openBox<Location>('locationBox');  // Open a box
   runApp(const MyApp());
 }
 

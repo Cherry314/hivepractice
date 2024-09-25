@@ -25,15 +25,16 @@ class Location {
   @HiveField(9)
   String notes;
 
-Location({required this.id,
-  required this.name,
-  required this.latitude,
-  required this.longitude,
-  required this.altitude,
-  required this.address,
-  required this.what3words,
-  required this.timeStamp,
-  required this.appointment,
-  required this.notes});
-
+  Location({
+    required this.id,
+    required this.name,
+    required this.latitude,
+    required this.longitude,
+    required this.altitude,
+    required this.address,
+    required this.what3words,
+    required this.timeStamp,
+    required this.appointment,
+    required this.notes,
+  });
 }

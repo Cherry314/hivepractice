@@ -6,7 +6,7 @@ import 'package:hivepractice/markthisspotdialog.dart';
 import 'package:hivepractice/functions/fetchaddress.dart';
 import 'package:hivepractice/functions/fetchwhat3words.dart';
 import 'package:hivepractice/functions/getlocation.dart';
-
+import 'package:intl/intl.dart';
 
 class MarkThisSpotDialog {
   static void show(BuildContext context) {
@@ -74,7 +74,8 @@ class MarkThisSpotDialog {
                     },
                     child: Text(selectedDateTime == null
                         ? 'Add Date / Time'
-                        : 'Selected: ${selectedDateTime!.toString()}'),
+                        : 'Selected: ${DateFormat('hh:mm a on dd/MM/yyyy').format(selectedDateTime!)}',
+                    ),
                   ),
                 ],
               );
@@ -134,10 +135,12 @@ void getThisSpot(String name, String notes, DateTime? selectedDateTime) async {
 
 
     // Open the Hive box
-    var box = await Hive.openBox<Location>('locationBox');
-
+   // var box = await Hive.openBox<Location>('locationBox');
     // Generate a new ID based on the current length of the box
-    int newId = box.length + 1;
+    var box = await Hive.openBox<Location>('locationBox');
+   // This line checks every ID in the box and finds the highest ID.If the box is empty, it sets the new ID to 0. Otherwise, it finds the highest ID and adds 1 to it.
+    int newId = box.isEmpty ? 0 : box.values.map((location) => location.id).reduce((a, b) => a > b ? a : b) + 1;
+
 
     // Create a new Location object
     Location newLocation = Location(
@@ -156,12 +159,6 @@ void getThisSpot(String name, String notes, DateTime? selectedDateTime) async {
     await box.add(newLocation);
 
     print("Location saved successfully!");
-
-
-
-// insert into Hive here
-
-
 
   } catch (e) {
     print("Error: $e");

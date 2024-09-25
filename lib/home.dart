@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:hivepractice/hive/location.dart';
+import 'package:hivepractice/screens/locationdetails.dart';
+import 'package:hivepractice/screens/showmap.dart';
 import 'package:intl/intl.dart';
 import 'markthisspotdialog.dart';
 
@@ -12,7 +14,8 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  late Box<Location> locationBox;
+  Box<Location>? locationBox; // Make it nullable
+  bool isLoading = true; // Add loading state
   int _selectedIndex = 0; // To track selected icon in BottomNavigationBar
 
   @override
@@ -24,20 +27,9 @@ class _HomeState extends State<Home> {
 
   Future<void> openLocationBox() async {
     locationBox = await Hive.openBox<Location>('locationBox');
-    setState(() {});
-  }
-
-  // Method to handle taps on BottomNavigationBar items
-// Method to handle taps on BottomNavigationBar items
-  void _onItemTapped(int index) {
     setState(() {
-      _selectedIndex = index;
+      isLoading = false; // Box has been opened, set loading to false
     });
-
-    // Show MarkThisSpotDialog when "Mark" icon (index 1) is tapped
-    if (index == 1) {
-      MarkThisSpotDialog.show(context);
-    }
   }
 
   @override
@@ -46,7 +38,9 @@ class _HomeState extends State<Home> {
       appBar: AppBar(
         title: const Text('FlyDrive Buddy'),
       ),
-      body: Column(
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator()) // Show loading indicator
+          : Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           const Padding(
@@ -56,19 +50,17 @@ class _HomeState extends State<Home> {
               style: TextStyle(fontSize: 18),
             ),
           ),
-
           const SizedBox(height: 16),
 
           // Scrollable container with ListView of locations
           Expanded(
-            child: locationBox.isEmpty
+            child: locationBox!.isEmpty
                 ? const Center(child: Text('No locations saved yet.'))
                 : ListView.builder(
-              itemCount: locationBox.length,
+              itemCount: locationBox!.length,
               itemBuilder: (context, index) {
-                final location = locationBox.getAt(index);
+                final location = locationBox!.getAt(index);
 
-                // Ensure location is not null
                 if (location == null) {
                   return const SizedBox.shrink();
                 }
@@ -77,23 +69,40 @@ class _HomeState extends State<Home> {
                 String formattedDate =
                 DateFormat('dd/MM/yyyy').format(location.appointment);
 
-                return ColoredBox(
-                  color: Colors.green,
-                  child: Material(
+                return Padding(
+                  padding: const EdgeInsets.all(8.0), // Add padding for spacing between items
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey, // Set tile color here
+                      borderRadius: BorderRadius.circular(15.0), // Rounded corners
+                    ),
                     child: ListTile(
+                      leading: InkWell(
+                        onTap: () {
+                          splashColor: Colors.blue.withOpacity(0.3); // Splash effect color
+                          print('Location tapped');
+                        },
+                        child: const Icon(Icons.location_on),
+                      ),
                       title: Text(location.name),
                       subtitle: Text('Appointment: $formattedDate'),
-                      tileColor: Colors.red,
-                      onTap: () {},
+                      trailing: const Icon(Icons.more_vert),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => LocationDetails(
+                              iD: index,
+                            ),
+                          ),
+                        );
+                      },
                     ),
-
-                  )
+                  ),
                 );
-
               },
             ),
           ),
-
         ],
       ),
 
@@ -124,24 +133,22 @@ class _HomeState extends State<Home> {
       ),
     );
   }
-  // Method to build each button with custom color and action
-  Widget _buildButton(String text, Color color, VoidCallback onPressed) {
-    return InkWell(
-      onTap: onPressed,
-      splashColor: Colors.white.withOpacity(0.3), // Splash effect color
-      child: Ink(
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Center(
-          child: Text(
-            text,
-            style: const TextStyle(color: Colors.white, fontSize: 16),
-          ),
-        ),
-      ),
-    );
-  }
 
+  // Method to handle taps on BottomNavigationBar items
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+
+    // Show MarkThisSpotDialog when "Mark" icon (index 1) is tapped
+    if (index == 1) {
+      MarkThisSpotDialog.show(context);
+    }
+    if (index == 2) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => MapPage()),
+      );
+    }
+  }
 }
