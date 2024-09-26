@@ -132,18 +132,12 @@ void getThisSpot(String name, String notes, DateTime? selectedDateTime) async {
     print("Appointment: $appointment");
 
 
-
-
-    // Open the Hive box
-   // var box = await Hive.openBox<Location>('locationBox');
-    // Generate a new ID based on the current length of the box
-    var box = await Hive.openBox<Location>('locationBox');
+    var locationStore = await Hive.openBox<Location>('locationBox');
    // This line checks every ID in the box and finds the highest ID.If the box is empty, it sets the new ID to 0. Otherwise, it finds the highest ID and adds 1 to it.
-    int newId = box.isEmpty ? 0 : box.values.map((location) => location.id).reduce((a, b) => a > b ? a : b) + 1;
-
+    int newId = locationStore.isEmpty ? 0 : locationStore.values.map((location) => location.id).reduce((a, b) => a > b ? a : b) + 1;
 
     // Create a new Location object
-    Location newLocation = Location(
+    Location locationNew = Location(
       id: newId,
       name: name,
       latitude: latitude,
@@ -156,7 +150,7 @@ void getThisSpot(String name, String notes, DateTime? selectedDateTime) async {
       notes: notes,
     );
     // Add the new location to the Hive box
-    await box.add(newLocation);
+    await locationStore.add(locationNew);
 
     print("Location saved successfully!");
 

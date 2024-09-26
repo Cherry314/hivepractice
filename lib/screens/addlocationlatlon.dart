@@ -37,9 +37,6 @@ class _AddLocationLatLonState extends State<AddLocationLatLon> {
   }
 
   void _initializeLocation() {
-    // Fetch location data or initialize a new one based on your logic
-   // location = box.get('someLocationKey'); // Assuming you're fetching it from Hive
-   //   Initialize the text fields with latitude and longitude passed to the widget
       latitudeController.text = widget.latitude.toString();
       longitudeController.text = widget.longitude.toString();
       getData(widget.latitude, widget.longitude); // Fetch the additional data (address, what3words)
@@ -76,40 +73,30 @@ class _AddLocationLatLonState extends State<AddLocationLatLon> {
   void saveLocation() async {
     // Open the Hive box
     var box = await Hive.openBox<Location>('locationBox');
-
     // This line checks every ID in the box and finds the highest ID. If the box is empty, it sets the new ID to 0. Otherwise, it finds the highest ID and adds 1 to it.
     int newId = box.isEmpty ? 0 : box.values.map((location) => location.id).reduce((a, b) => a > b ? a : b) + 1;
 
-    // Create a new Location object with all required parameters
     final newLocation = Location(
       id: newId,
       name: nameController.text,
       latitude: double.parse(latitudeController.text), // Convert string to double
       longitude: double.parse(longitudeController.text), // Convert string to double
-      altitude: 0.00 ,// Convert string to double
+      altitude: 0.00, // Convert string to double
       address: addressController.text,
       what3words: what3wordsController.text,
       timeStamp: DateTime.now(),
       appointment: DateTime.now(),
       notes: notesController.text,
-
-
     );
-
-    // Add the new location to the Hive box
     await box.add(newLocation);
 
-    // Optionally, save the new location with a specific key (if needed)
-    // final int key = DateTime.now().millisecondsSinceEpoch; // or use any unique identifier
-    // box.put(key, newLocation); // Use put for specific key (optional)
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Location saved successfully')),
+      );
 
-    // Show confirmation and go back
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Location saved successfully')),
-    );
+
     Navigator.pop(context);
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -161,15 +148,6 @@ class _AddLocationLatLonState extends State<AddLocationLatLon> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Altitude
-                  // TextField(
-                  //   controller: altitudeController,
-                  //   decoration: const InputDecoration(
-                  //     labelText: 'Altitude',
-                  //   ),
-                  //   keyboardType: TextInputType.number,
-                  // ),
-                  const SizedBox(height: 10),
 
                   // Address (multiline)
                   TextField(

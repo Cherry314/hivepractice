@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:hivepractice/hive/location.dart';
 import 'package:hivepractice/screens/locationdetails.dart';
+import 'package:hivepractice/screens/mapsinglelocation.dart';
+import 'package:hivepractice/screens/navmap.dart';
 import 'package:hivepractice/screens/showmap.dart';
 import 'package:intl/intl.dart';
 import 'markthisspotdialog.dart';
-
+import '';
 class Home extends StatefulWidget {
   const Home({super.key});
 
@@ -14,7 +16,7 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  Box<Location>? locationBox; // Make it nullable
+  Box<Location>? locationStore; // Make it nullable
   bool isLoading = true; // Add loading state
   int _selectedIndex = 0; // To track selected icon in BottomNavigationBar
 
@@ -26,7 +28,7 @@ class _HomeState extends State<Home> {
   }
 
   Future<void> openLocationBox() async {
-    locationBox = await Hive.openBox<Location>('locationBox');
+    locationStore = await Hive.openBox<Location>('locationBox');
     setState(() {
       isLoading = false; // Box has been opened, set loading to false
     });
@@ -54,20 +56,20 @@ class _HomeState extends State<Home> {
 
           // Scrollable container with ListView of locations
           Expanded(
-            child: locationBox!.isEmpty
+            child: locationStore!.isEmpty
                 ? const Center(child: Text('No locations saved yet.'))
                 : ListView.builder(
-              itemCount: locationBox!.length,
+              itemCount: locationStore!.length,
               itemBuilder: (context, index) {
-                final location = locationBox!.getAt(index);
+                final locationSingle = locationStore!.getAt(index);
 
-                if (location == null) {
+                if (locationSingle == null) {
                   return const SizedBox.shrink();
                 }
 
                 // Format the appointment date to DD/MM/YYYY
                 String formattedDate =
-                DateFormat('dd/MM/yyyy').format(location.appointment);
+                DateFormat('dd/MM/yyyy').format(locationSingle.appointment);
 
                 return Padding(
                   padding: const EdgeInsets.all(8.0), // Add padding for spacing between items
@@ -79,12 +81,16 @@ class _HomeState extends State<Home> {
                     child: ListTile(
                       leading: InkWell(
                         onTap: () {
-                          splashColor: Colors.blue.withOpacity(0.3); // Splash effect color
-                          print('Location tapped');
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => MapSingleLocation(
+                                latitude: locationSingle.latitude,
+                                longitude:locationSingle.longitude,
+                                name: locationSingle.name)));
                         },
                         child: const Icon(Icons.location_on),
                       ),
-                      title: Text(location.name),
+                      title: Text(locationSingle.name),
                       subtitle: Text('Appointment: $formattedDate'),
                       trailing: const Icon(Icons.more_vert),
                       onTap: () {
@@ -133,7 +139,6 @@ class _HomeState extends State<Home> {
       ),
     );
   }
-
   // Method to handle taps on BottomNavigationBar items
   void _onItemTapped(int index) {
     setState(() {
@@ -147,8 +152,15 @@ class _HomeState extends State<Home> {
     if (index == 2) {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => MapPage()),
+        MaterialPageRoute(builder: (context) => const MapPage()),
+      );
+    }
+    if (index == 3) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const NavMap()),
       );
     }
   }
 }
+

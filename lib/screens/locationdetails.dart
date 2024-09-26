@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:hivepractice/hive/location.dart';
 import 'package:hivepractice/screens/editlocationpage.dart';
+import 'package:hivepractice/screens/mapsinglelocation.dart';
 import 'package:intl/intl.dart';
 
 class LocationDetails extends StatefulWidget {
@@ -14,13 +15,15 @@ class LocationDetails extends StatefulWidget {
 }
 
 class _LocationDetailsState extends State<LocationDetails> {
-  Location? location; // Don't need 'late' here since it's nullable.
-  final box = Hive.box<Location>('locationBox');
+  Location? locationSingle; // Don't need 'late' here since it's nullable.
+  final locationStore = Hive.box<Location>('locationBox');
+  int _selectedIndex = 0; // To track selected icon in BottomNavigationBar
+
 
   @override
   void initState() {
     super.initState();
-    location = box.get(widget.iD);
+    locationSingle = locationStore.get(widget.iD);
   }
 
   @override
@@ -31,7 +34,7 @@ class _LocationDetailsState extends State<LocationDetails> {
         centerTitle: true,
         backgroundColor: Colors.teal,
       ),
-      body: location == null
+      body: locationSingle == null
           ? const Center(child: Text('Location not found'))
           : Padding(
         padding: const EdgeInsets.all(16.0),
@@ -39,14 +42,6 @@ class _LocationDetailsState extends State<LocationDetails> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // const Text(
-              //   'Location Details',
-              //   style: TextStyle(
-              //     fontSize: 24,
-              //     fontWeight: FontWeight.bold,
-              //     color: Colors.teal,
-              //   ),
-              // ),
               const SizedBox(height: 20),
               Card(
                 shape: RoundedRectangleBorder(
@@ -61,82 +56,100 @@ class _LocationDetailsState extends State<LocationDetails> {
                     children: [
                       DetailItem(
                           title: 'Name of Location:',
-                          value: location?.name ?? 'N/A'),
+                          value: locationSingle?.name ?? 'N/A'),
                       DetailItem(
                           title: 'Latitude:',
-                          value: '${location?.latitude ?? 'N/A'}'),
+                          value: '${locationSingle?.latitude ?? 'N/A'}'),
                       DetailItem(
                           title: 'Longitude:',
-                          value: '${location?.longitude ?? 'N/A'}'),
+                          value: '${locationSingle?.longitude ?? 'N/A'}'),
                       DetailItem(
                           title: 'Altitude:',
-                          value: '${location?.altitude ?? 'N/A'}'),
+                          value: '${locationSingle?.altitude ?? 'N/A'}'),
                       DetailItem(
                           title: 'Address:',
-                          value: location?.address ?? 'N/A'),
+                          value: locationSingle?.address ?? 'N/A'),
                       DetailItem(
                           title: 'What3Words:',
-                          value: location?.what3words ?? 'N/A'),
+                          value: locationSingle?.what3words ?? 'N/A'),
                       DetailItem(
-                          title: 'Notes:', value: location?.notes ?? 'N/A'),
+                          title: 'Notes:', value: locationSingle?.notes ?? 'N/A'),
                       DetailItem(
                           title: 'Timestamp:',
-                          value: location?.timeStamp != null
+                          value: locationSingle?.timeStamp != null
                               ? DateFormat('hh:mm a on dd/MM/yyyy')
-                              .format(location!.timeStamp)
+                              .format(locationSingle!.timeStamp)
                               : 'N/A'),
                     ],
                   ),
                 ),
               ),
-          const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.teal,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                    child: const Text('Back'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => EditLocationPage(iD: widget.iD),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.teal,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                    child: const Text('Edit'),
-                  ),
-                ],
-              ),
             ],
           ),
         ),
       ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.edit),
+            label: 'Edit',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.map_outlined),
+            label: 'Map',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.exit_to_app),
+            label: 'Close',
+          ),
+          // BottomNavigationBarItem(
+          //   icon: Icon(Icons.settings),
+          //   label: 'Settings',
+          // ),
+        ],
+        currentIndex: _selectedIndex,
+        unselectedItemColor: Colors.blue[200], // Current selected index
+        selectedItemColor: Colors.blue, // Color for selected item
+        onTap: _onItemTapped, // Function to handle taps
+      ),
+
+
     );
   }
+
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+
+    // Show MarkThisSpotDialog when "Mark" icon (index 1) is tapped
+    if (index == 0) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => EditLocationPage(iD: widget.iD),
+        ),
+      );
+    }
+    if (index == 1) {
+      Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => MapSingleLocation(
+              latitude: locationSingle!.latitude,
+              longitude:locationSingle!.longitude,
+              name: locationSingle!.name)));
+    }
+    if (index == 2) {
+     Navigator.pop(context);
+    }
+  }
+
 }
+
+
+
+
 class DetailItem extends StatelessWidget {
   final String title;
   final String value;
